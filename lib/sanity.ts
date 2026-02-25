@@ -31,23 +31,23 @@ export const queries = {
     } | order(count desc) [0...25]
   `,
   
-  // Actions by country/location
+  // Actions by country - location.countries is an array
   actionsByCountry: `
-    *[_type == "action" && defined(location.country)] {
-      "country": location.country
-    } | order(country asc)
+    *[_type == "action" && defined(location.countries) && length(location.countries) > 0] {
+      "countries": location.countries
+    }
   `,
   
-  // Total countries
+  // Total countries - count unique values across all location.countries arrays
   totalCountries: `
-    count(array::unique(*[_type == "action" && defined(location.country)].location.country))
+    count(array::unique(*[_type == "action" && defined(location.countries)].location.countries[]))
   `,
   
   // US vs non-US actions
   usVsNonUs: `{
-    "us": count(*[_type == "action" && location.country == "US"]),
-    "nonUs": count(*[_type == "action" && location.country != "US" && defined(location.country)]),
-    "noCountry": count(*[_type == "action" && !defined(location.country)])
+    "us": count(*[_type == "action" && "US" in location.countries]),
+    "nonUs": count(*[_type == "action" && defined(location.countries) && length(location.countries) > 0 && !("US" in location.countries)]),
+    "noCountry": count(*[_type == "action" && (!defined(location.countries) || length(location.countries) == 0)])
   }`,
   
   // Most common skills
@@ -79,11 +79,14 @@ export const queries = {
     } | order(count desc)
   `,
   
-  // Be Heard actions by level (based on location scope)
+  // Be Heard actions by level
+  // Federal = US in countries, no states specified
+  // State = has states specified
+  // Local = has cities or zipcodes specified
   beHeardByLevel: `{
-    "federal": count(*[_type == "action" && references(*[_type == "category" && slug.current == "be-heard"]._id) && location.scope == "federal"]),
-    "state": count(*[_type == "action" && references(*[_type == "category" && slug.current == "be-heard"]._id) && location.scope == "state"]),
-    "local": count(*[_type == "action" && references(*[_type == "category" && slug.current == "be-heard"]._id) && location.scope == "local"]),
+    "federal": count(*[_type == "action" && references(*[_type == "category" && slug.current == "be-heard"]._id) && "US" in location.countries && (!defined(location.states) || length(location.states) == 0)]),
+    "state": count(*[_type == "action" && references(*[_type == "category" && slug.current == "be-heard"]._id) && defined(location.states) && length(location.states) > 0 && (!defined(location.cities) || length(location.cities) == 0) && (!defined(location.zipcodes) || length(location.zipcodes) == 0)]),
+    "local": count(*[_type == "action" && references(*[_type == "category" && slug.current == "be-heard"]._id) && (length(location.cities) > 0 || length(location.zipcodes) > 0)]),
     "total": count(*[_type == "action" && references(*[_type == "category" && slug.current == "be-heard"]._id)])
   }`,
   
@@ -135,10 +138,14 @@ export async function fetchDashboardData() {
     sanityClient.fetch(queries.lastUpdated),
   ])
 
-  // Process country counts
+  // Process country counts - now handling arrays of countries per action
   const countryCounts: Record<string, number> = {}
-  actionsByCountryRaw.forEach((a: { country: string }) => {
-    countryCounts[a.country] = (countryCounts[a.country] || 0) + 1
+  actionsByCountryRaw.forEach((a: { countries: string[] }) => {
+    if (a.countries && Array.isArray(a.countries)) {
+      a.countries.forEach((country: string) => {
+        countryCounts[country] = (countryCounts[country] || 0) + 1
+      })
+    }
   })
   const actionsByCountry = Object.entries(countryCounts)
     .map(([country, count]) => ({ country, count }))
