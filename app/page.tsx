@@ -35,22 +35,7 @@ function BigNumber({ value, label, color = 'gray' }: { value: number | string; l
   )
 }
 
-function StatRow({ label, value, color = 'gray' }: { label: string; value: number; color?: 'gray' | 'green' | 'yellow' | 'red' }) {
-  const colorClasses = {
-    gray: 'text-gray-900',
-    green: 'text-green-600',
-    yellow: 'text-yellow-600',
-    red: 'text-red-600',
-  }
-  return (
-    <div className="flex justify-between items-center py-2 border-b border-gray-100 last:border-0">
-      <span className="text-gray-600">{label}</span>
-      <span className={`font-semibold ${colorClasses[color]}`}>{value.toLocaleString()}</span>
-    </div>
-  )
-}
-
-function DataTable({ data, columns }: { data: any[]; columns: { key: string; label: string; format?: (v: any) => string }[] }) {
+function DataTable({ data, columns }: { data: any[]; columns: { key: string; label: string; format?: (v: any, row?: any) => string }[] }) {
   if (!data || data.length === 0) {
     return <div className="text-gray-400 text-sm">No data</div>
   }
@@ -71,7 +56,7 @@ function DataTable({ data, columns }: { data: any[]; columns: { key: string; lab
             <tr key={i} className="border-b border-gray-100">
               {columns.map((col) => (
                 <td key={col.key} className="py-2 text-gray-800">
-                  {col.format ? col.format(row[col.key]) : row[col.key]}
+                  {col.format ? col.format(row[col.key], row) : row[col.key]}
                 </td>
               ))}
             </tr>
@@ -82,13 +67,17 @@ function DataTable({ data, columns }: { data: any[]; columns: { key: string; lab
   )
 }
 
-function ProgressBar({ value, max, label }: { value: number; max: number; label: string }) {
+function ProgressBar({ value, max, total, label }: { value: number; max: number; total: number; label: string }) {
   const pct = max > 0 ? (value / max) * 100 : 0
+  const pctOfTotal = total > 0 ? ((value / total) * 100).toFixed(1) : '0'
   return (
     <div className="mb-3">
       <div className="flex justify-between text-sm mb-1">
         <span className="text-gray-700">{label}</span>
-        <span className="text-gray-500">{value.toLocaleString()}</span>
+        <span>
+          <span className="text-gray-900 font-medium">{value.toLocaleString()}</span>
+          <span className="text-gray-400 ml-2">({pctOfTotal}%)</span>
+        </span>
       </div>
       <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
         <div className="h-full bg-blue-500 rounded-full" style={{ width: `${Math.min(pct, 100)}%` }} />
@@ -125,14 +114,23 @@ export default async function Dashboard() {
   const usPercent = data.totalActions > 0 
     ? Math.round((data.usVsNonUs.us / data.totalActions) * 100)
     : 0
+
+  const usPercentExBeHeard = data.usVsNonUsExcludingBeHeard.total > 0
+    ? Math.round((data.usVsNonUsExcludingBeHeard.us / data.usVsNonUsExcludingBeHeard.total) * 100)
+    : 0
     
   const aplPercent = data.aplCoverage.total > 0
     ? Math.round((data.aplCoverage.withPositions / data.aplCoverage.total) * 100)
     : 0
 
-  // Calculate content health score
-  const healthIssues = data.actionsPastReviewDateCount + data.actionsMissingLogline + data.actionsMissingUrl + data.actionsMissingOrganization
-  const healthColor = healthIssues === 0 ? 'green' : healthIssues < 50 ? 'yellow' : 'red'
+  // Calculate totals for percentage displays
+  const totalCategoryActions = data.actionsByCategory.reduce((sum: number, c: any) => sum + c.count, 0)
+  const totalNounActions = data.actionsByNoun.reduce((sum: number, n: any) => sum + n.count, 0)
+  const totalSkillActions = data.actionsBySkill.reduce((sum: number, s: any) => sum + s.count, 0)
+  const totalOrgActions = data.topOrganizations.reduce((sum: number, o: any) => sum + o.count, 0)
+  const totalCountryActions = data.actionsByCountry.reduce((sum: number, c: any) => sum + c.count, 0)
+  const totalContinentActions = data.actionsByContinent.reduce((sum: number, c: any) => sum + c.count, 0)
+  const totalStateActions = data.beHeardByState.reduce((sum: number, s: any) => sum + s.count, 0)
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -152,7 +150,7 @@ export default async function Dashboard() {
         
         {/* ===== OVERVIEW ===== */}
         <SectionHeader title="Overview" />
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
           <Card title="Total Actions">
             <BigNumber value={data.totalActions} />
           </Card>
@@ -161,6 +159,9 @@ export default async function Dashboard() {
           </Card>
           <Card title="US Actions">
             <BigNumber value={`${usPercent}%`} label={`${data.usVsNonUs.us.toLocaleString()} of ${data.totalActions.toLocaleString()}`} />
+          </Card>
+          <Card title="US (excl. Be Heard)">
+            <BigNumber value={`${usPercentExBeHeard}%`} label={`${data.usVsNonUsExcludingBeHeard.us.toLocaleString()} of ${data.usVsNonUsExcludingBeHeard.total.toLocaleString()}`} />
           </Card>
           <Card title="APL Coverage">
             <BigNumber value={`${aplPercent}%`} label="actions with positions" />
@@ -187,24 +188,33 @@ export default async function Dashboard() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           <Card title="Be Heard by State">
             {data.beHeardByState.length > 0 ? (
-              <DataTable 
-                data={data.beHeardByState.slice(0, 15)} 
-                columns={[
-                  { key: 'state', label: 'State' },
-                  { key: 'count', label: 'Actions' },
-                ]} 
-              />
+              <>
+                {data.beHeardByState.slice(0, 15).map((s: any) => (
+                  <ProgressBar 
+                    key={s.state} 
+                    value={s.count} 
+                    max={data.beHeardByState[0]?.count || 1}
+                    total={totalStateActions}
+                    label={s.state} 
+                  />
+                ))}
+              </>
             ) : (
               <div className="text-gray-400 text-sm">No state-level actions</div>
             )}
           </Card>
-          <Card title="States with No Be Heard Actions">
-            <p className="text-sm text-gray-500 mb-3">
-              {50 - data.beHeardByState.length} states without coverage
-            </p>
-            <div className="text-xs text-gray-400">
-              (Compare against full state list to identify gaps)
-            </div>
+          <Card title={`States Without Be Heard (${data.statesWithoutBeHeard.length})`}>
+            {data.statesWithoutBeHeard.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {data.statesWithoutBeHeard.map((state: string) => (
+                  <span key={state} className="inline-block bg-red-50 text-red-700 rounded px-2 py-1 text-sm">
+                    {state}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <div className="text-green-600">All 50 states covered ✓</div>
+            )}
           </Card>
         </div>
 
@@ -216,7 +226,8 @@ export default async function Dashboard() {
               <ProgressBar 
                 key={cat.slug} 
                 value={cat.count} 
-                max={data.actionsByCategory[0]?.count || 1} 
+                max={data.actionsByCategory[0]?.count || 1}
+                total={totalCategoryActions}
                 label={cat.name} 
               />
             ))}
@@ -227,20 +238,35 @@ export default async function Dashboard() {
               <ProgressBar 
                 key={noun.slug} 
                 value={noun.count} 
-                max={data.actionsByNoun[0]?.count || 1} 
+                max={data.actionsByNoun[0]?.count || 1}
+                total={totalNounActions}
                 label={noun.name} 
               />
             ))}
           </Card>
 
+          <Card title="Actions by Continent">
+            {data.actionsByContinent.map((c: any) => (
+              <ProgressBar 
+                key={c.continent} 
+                value={c.count} 
+                max={data.actionsByContinent[0]?.count || 1}
+                total={totalContinentActions}
+                label={c.continent} 
+              />
+            ))}
+          </Card>
+
           <Card title="Actions by Country">
-            <DataTable 
-              data={data.actionsByCountry.slice(0, 12)} 
-              columns={[
-                { key: 'country', label: 'Country' },
-                { key: 'count', label: 'Actions' },
-              ]} 
-            />
+            {data.actionsByCountry.slice(0, 12).map((c: any) => (
+              <ProgressBar 
+                key={c.country} 
+                value={c.count} 
+                max={data.actionsByCountry[0]?.count || 1}
+                total={totalCountryActions}
+                label={c.country} 
+              />
+            ))}
           </Card>
 
           <Card title="Most Common Skills">
@@ -248,33 +274,36 @@ export default async function Dashboard() {
               <ProgressBar 
                 key={skill.name} 
                 value={skill.count} 
-                max={data.actionsBySkill[0]?.count || 1} 
+                max={data.actionsBySkill[0]?.count || 1}
+                total={totalSkillActions}
                 label={skill.name} 
               />
             ))}
           </Card>
 
-          <Card title="Top Verb + Noun Combos">
-            <DataTable 
-              data={data.verbNounCombos.slice(0, 10)} 
-              columns={[
-                { key: 'combo', label: 'Combination' },
-                { key: 'count', label: '#' },
-              ]} 
-            />
-          </Card>
-
           <Card title="Top Organizations">
-            {data.topOrganizations.filter((o: any) => o.count > 0).slice(0, 10).map((org: any) => (
+            {data.topOrganizations.filter((o: any) => o.count > 0 && o.name).slice(0, 10).map((org: any) => (
               <ProgressBar 
                 key={org.name} 
                 value={org.count} 
-                max={data.topOrganizations[0]?.count || 1} 
-                label={org.name} 
+                max={data.topOrganizations[0]?.count || 1}
+                total={totalOrgActions}
+                label={org.name || '(unnamed)'} 
               />
             ))}
           </Card>
         </div>
+
+        <Card title="Top Verb + Noun Combos" className="mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8">
+            {data.verbNounCombos.slice(0, 15).map((combo: any) => (
+              <div key={combo.combo} className="flex justify-between py-2 border-b border-gray-100">
+                <span className="text-gray-700">{combo.combo}</span>
+                <span className="text-gray-900 font-medium">{combo.count}</span>
+              </div>
+            ))}
+          </div>
+        </Card>
 
         {/* ===== CONTENT HEALTH ===== */}
         <SectionHeader title="Content Health" description="Issues requiring attention" />

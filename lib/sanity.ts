@@ -8,6 +8,187 @@ export const sanityClient = createClient({
   useCdn: false,
 })
 
+// Country to continent mapping
+export const countryToContinent: Record<string, string> = {
+  // North America
+  'United States': 'North America',
+  'Canada': 'North America',
+  'Mexico': 'North America',
+  'Guatemala': 'North America',
+  'Honduras': 'North America',
+  'El Salvador': 'North America',
+  'Nicaragua': 'North America',
+  'Costa Rica': 'North America',
+  'Panama': 'North America',
+  'Cuba': 'North America',
+  'Jamaica': 'North America',
+  'Haiti': 'North America',
+  'Dominican Republic': 'North America',
+  // South America
+  'Brazil': 'South America',
+  'Argentina': 'South America',
+  'Peru': 'South America',
+  'Colombia': 'South America',
+  'Chile': 'South America',
+  'Ecuador': 'South America',
+  'Bolivia': 'South America',
+  'Paraguay': 'South America',
+  'Uruguay': 'South America',
+  'Venezuela': 'South America',
+  'Guyana': 'South America',
+  'Suriname': 'South America',
+  // Europe
+  'United Kingdom': 'Europe',
+  'Germany': 'Europe',
+  'France': 'Europe',
+  'Italy': 'Europe',
+  'Spain': 'Europe',
+  'Netherlands': 'Europe',
+  'Belgium': 'Europe',
+  'Sweden': 'Europe',
+  'Norway': 'Europe',
+  'Denmark': 'Europe',
+  'Finland': 'Europe',
+  'Ireland': 'Europe',
+  'Portugal': 'Europe',
+  'Greece': 'Europe',
+  'Poland': 'Europe',
+  'Austria': 'Europe',
+  'Switzerland': 'Europe',
+  'Czech Republic': 'Europe',
+  'Romania': 'Europe',
+  'Hungary': 'Europe',
+  'Ukraine': 'Europe',
+  'Russia': 'Europe',
+  // Africa
+  'Kenya': 'Africa',
+  'Tanzania': 'Africa',
+  'Nigeria': 'Africa',
+  'Uganda': 'Africa',
+  'South Africa': 'Africa',
+  'Ethiopia': 'Africa',
+  'Ghana': 'Africa',
+  'Senegal': 'Africa',
+  'Rwanda': 'Africa',
+  'Malawi': 'Africa',
+  'Zambia': 'Africa',
+  'Zimbabwe': 'Africa',
+  'Mozambique': 'Africa',
+  'Madagascar': 'Africa',
+  'Cameroon': 'Africa',
+  'Ivory Coast': 'Africa',
+  'Mali': 'Africa',
+  'Burkina Faso': 'Africa',
+  'Niger': 'Africa',
+  'Democratic Republic of the Congo': 'Africa',
+  'Egypt': 'Africa',
+  'Morocco': 'Africa',
+  'Algeria': 'Africa',
+  'Tunisia': 'Africa',
+  'Libya': 'Africa',
+  'Sudan': 'Africa',
+  'South Sudan': 'Africa',
+  'Somalia': 'Africa',
+  'Eritrea': 'Africa',
+  'Djibouti': 'Africa',
+  'Liberia': 'Africa',
+  'Sierra Leone': 'Africa',
+  'Guinea': 'Africa',
+  'Togo': 'Africa',
+  'Benin': 'Africa',
+  'Central African Republic': 'Africa',
+  'Chad': 'Africa',
+  'Congo': 'Africa',
+  'Gabon': 'Africa',
+  'Equatorial Guinea': 'Africa',
+  'Angola': 'Africa',
+  'Namibia': 'Africa',
+  'Botswana': 'Africa',
+  'Lesotho': 'Africa',
+  'Eswatini': 'Africa',
+  'Mauritius': 'Africa',
+  'Seychelles': 'Africa',
+  'Comoros': 'Africa',
+  'Cape Verde': 'Africa',
+  'São Tomé and Príncipe': 'Africa',
+  'Gambia': 'Africa',
+  'Guinea-Bissau': 'Africa',
+  'Mauritania': 'Africa',
+  // Asia
+  'India': 'Asia',
+  'China': 'Asia',
+  'Japan': 'Asia',
+  'South Korea': 'Asia',
+  'Indonesia': 'Asia',
+  'Philippines': 'Asia',
+  'Vietnam': 'Asia',
+  'Thailand': 'Asia',
+  'Malaysia': 'Asia',
+  'Singapore': 'Asia',
+  'Myanmar': 'Asia',
+  'Cambodia': 'Asia',
+  'Laos': 'Asia',
+  'Bangladesh': 'Asia',
+  'Pakistan': 'Asia',
+  'Sri Lanka': 'Asia',
+  'Nepal': 'Asia',
+  'Afghanistan': 'Asia',
+  'Iran': 'Asia',
+  'Iraq': 'Asia',
+  'Saudi Arabia': 'Asia',
+  'United Arab Emirates': 'Asia',
+  'Israel': 'Asia',
+  'Jordan': 'Asia',
+  'Lebanon': 'Asia',
+  'Syria': 'Asia',
+  'Turkey': 'Asia',
+  'Yemen': 'Asia',
+  'Oman': 'Asia',
+  'Kuwait': 'Asia',
+  'Qatar': 'Asia',
+  'Bahrain': 'Asia',
+  'Kazakhstan': 'Asia',
+  'Uzbekistan': 'Asia',
+  'Turkmenistan': 'Asia',
+  'Tajikistan': 'Asia',
+  'Kyrgyzstan': 'Asia',
+  'Mongolia': 'Asia',
+  'North Korea': 'Asia',
+  'Taiwan': 'Asia',
+  'Hong Kong': 'Asia',
+  'Macau': 'Asia',
+  'Brunei': 'Asia',
+  'Timor-Leste': 'Asia',
+  'Maldives': 'Asia',
+  'Bhutan': 'Asia',
+  // Oceania
+  'Australia': 'Oceania',
+  'New Zealand': 'Oceania',
+  'Papua New Guinea': 'Oceania',
+  'Fiji': 'Oceania',
+  'Solomon Islands': 'Oceania',
+  'Vanuatu': 'Oceania',
+  'Samoa': 'Oceania',
+  'Tonga': 'Oceania',
+  'Micronesia': 'Oceania',
+  'Kiribati': 'Oceania',
+  'Marshall Islands': 'Oceania',
+  'Palau': 'Oceania',
+  'Nauru': 'Oceania',
+  'Tuvalu': 'Oceania',
+}
+
+// All 50 US states
+export const US_STATES = [
+  'Alabama', 'Alaska', 'Arizona', 'Arkansas', 'California', 'Colorado', 'Connecticut', 'Delaware',
+  'Florida', 'Georgia', 'Hawaii', 'Idaho', 'Illinois', 'Indiana', 'Iowa', 'Kansas', 'Kentucky',
+  'Louisiana', 'Maine', 'Maryland', 'Massachusetts', 'Michigan', 'Minnesota', 'Mississippi',
+  'Missouri', 'Montana', 'Nebraska', 'Nevada', 'New Hampshire', 'New Jersey', 'New Mexico',
+  'New York', 'North Carolina', 'North Dakota', 'Ohio', 'Oklahoma', 'Oregon', 'Pennsylvania',
+  'Rhode Island', 'South Carolina', 'South Dakota', 'Tennessee', 'Texas', 'Utah', 'Vermont',
+  'Virginia', 'Washington', 'West Virginia', 'Wisconsin', 'Wyoming'
+]
+
 export const queries = {
   // ===== OVERVIEW =====
   totalActions: `count(*[_type == "action"])`,
@@ -20,6 +201,13 @@ export const queries = {
     "us": count(*[_type == "action" && "United States" in location.countries]),
     "nonUs": count(*[_type == "action" && defined(location.countries) && length(location.countries) > 0 && !("United States" in location.countries)]),
     "noCountry": count(*[_type == "action" && (!defined(location.countries) || length(location.countries) == 0)])
+  }`,
+  
+  // US vs Non-US excluding Be Heard actions
+  usVsNonUsExcludingBeHeard: `{
+    "us": count(*[_type == "action" && "United States" in location.countries && !references(*[_type == "category" && slug.current == "be-heard"]._id)]),
+    "nonUs": count(*[_type == "action" && defined(location.countries) && length(location.countries) > 0 && !("United States" in location.countries) && !references(*[_type == "category" && slug.current == "be-heard"]._id)]),
+    "total": count(*[_type == "action" && !references(*[_type == "category" && slug.current == "be-heard"]._id)])
   }`,
   
   aplCoverage: `{
@@ -160,6 +348,7 @@ export async function fetchDashboardData() {
     totalActions,
     totalCountries,
     usVsNonUs,
+    usVsNonUsExcludingBeHeard,
     aplCoverage,
     beHeardByLevel,
     beHeardByStateRaw,
@@ -189,6 +378,7 @@ export async function fetchDashboardData() {
     sanityClient.fetch(queries.totalActions),
     sanityClient.fetch(queries.totalCountries),
     sanityClient.fetch(queries.usVsNonUs),
+    sanityClient.fetch(queries.usVsNonUsExcludingBeHeard),
     sanityClient.fetch(queries.aplCoverage),
     sanityClient.fetch(queries.beHeardByLevel),
     sanityClient.fetch(queries.beHeardByState),
@@ -229,6 +419,16 @@ export async function fetchDashboardData() {
     .map(([country, count]) => ({ country, count }))
     .sort((a, b) => b.count - a.count)
 
+  // Process continent counts
+  const continentCounts: Record<string, number> = {}
+  Object.entries(countryCounts).forEach(([country, count]) => {
+    const continent = countryToContinent[country] || 'Other'
+    continentCounts[continent] = (continentCounts[continent] || 0) + count
+  })
+  const actionsByContinent = Object.entries(continentCounts)
+    .map(([continent, count]) => ({ continent, count }))
+    .sort((a, b) => b.count - a.count)
+
   // Process Be Heard by state
   const stateCounts: Record<string, number> = {}
   beHeardByStateRaw.forEach((a: { states: string[] }) => {
@@ -241,6 +441,10 @@ export async function fetchDashboardData() {
   const beHeardByState = Object.entries(stateCounts)
     .map(([state, count]) => ({ state, count }))
     .sort((a, b) => b.count - a.count)
+
+  // Find states without Be Heard actions
+  const statesWithActions = new Set(Object.keys(stateCounts))
+  const statesWithoutBeHeard = US_STATES.filter(state => !statesWithActions.has(state))
 
   // Process verb+noun combinations
   const comboCounts: Record<string, number> = {}
@@ -260,14 +464,17 @@ export async function fetchDashboardData() {
     totalActions,
     totalCountries,
     usVsNonUs,
+    usVsNonUsExcludingBeHeard,
     aplCoverage,
     // Be Heard
     beHeardByLevel,
     beHeardByState,
+    statesWithoutBeHeard,
     // Content Distribution
     actionsByCategory,
     actionsByNoun,
     actionsByCountry,
+    actionsByContinent,
     actionsBySkill,
     verbNounCombos,
     // Content Health
