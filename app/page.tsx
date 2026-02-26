@@ -2,11 +2,12 @@ import { fetchDashboardData } from '@/lib/sanity'
 
 export const revalidate = 3600
 
-function Card({ title, children, className = '' }: { title: string; children: React.ReactNode; className?: string }) {
+function Card({ title, children, className = '', footer }: { title: string; children: React.ReactNode; className?: string; footer?: string }) {
   return (
     <div className={`bg-white rounded-lg shadow p-6 ${className}`}>
       <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wide mb-4">{title}</h3>
       {children}
+      {footer && <p className="text-xs text-gray-400 mt-4 italic">{footer}</p>}
     </div>
   )
 }
@@ -67,16 +68,17 @@ function DataTable({ data, columns }: { data: any[]; columns: { key: string; lab
   )
 }
 
-function ProgressBar({ value, max, total, label }: { value: number; max: number; total: number; label: string }) {
+function ProgressBar({ value, max, total, label, percentLabel }: { value: number; max: number; total: number; label: string; percentLabel?: string }) {
   const pct = max > 0 ? (value / max) * 100 : 0
   const pctOfTotal = total > 0 ? ((value / total) * 100).toFixed(1) : '0'
+  const pctDisplay = percentLabel ? `${pctOfTotal}% ${percentLabel}` : `${pctOfTotal}%`
   return (
     <div className="mb-3">
       <div className="flex justify-between text-sm mb-1">
         <span className="text-gray-700">{label}</span>
         <span>
           <span className="text-gray-900 font-medium">{value.toLocaleString()}</span>
-          <span className="text-gray-400 ml-2">({pctOfTotal}%)</span>
+          <span className="text-gray-400 ml-2">({pctDisplay})</span>
         </span>
       </div>
       <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
@@ -114,17 +116,13 @@ export default async function Dashboard() {
   const usPercent = data.totalActions > 0 
     ? Math.round((data.usVsNonUs.us / data.totalActions) * 100)
     : 0
-
-  const usPercentExBeHeard = data.usVsNonUsExcludingBeHeard.total > 0
-    ? Math.round((data.usVsNonUsExcludingBeHeard.us / data.usVsNonUsExcludingBeHeard.total) * 100)
-    : 0
     
   const aplPercent = data.aplCoverage.total > 0
     ? Math.round((data.aplCoverage.withPositions / data.aplCoverage.total) * 100)
     : 0
 
-  // For multi-select fields, use totalActions as denominator to show "% of actions with this tag"
-  // This is more meaningful than "% of all tags" when items can have multiple tags
+  // Calculate total country tags for geographic share percentage
+  const totalCountryTags = data.actionsByCountry.reduce((sum: number, c: any) => sum + c.count, 0)
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -144,18 +142,15 @@ export default async function Dashboard() {
         
         {/* ===== OVERVIEW ===== */}
         <SectionHeader title="Overview" />
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <Card title="Total Actions">
             <BigNumber value={data.totalActions} />
           </Card>
           <Card title="Countries Served">
             <BigNumber value={data.totalCountries} />
           </Card>
-          <Card title="US Actions">
-            <BigNumber value={`${usPercent}%`} label={`${data.usVsNonUs.us.toLocaleString()} of ${data.totalActions.toLocaleString()}`} />
-          </Card>
-          <Card title="US (excl. Be Heard)">
-            <BigNumber value={`${usPercentExBeHeard}%`} label={`${data.usVsNonUsExcludingBeHeard.us.toLocaleString()} of ${data.usVsNonUsExcludingBeHeard.total.toLocaleString()}`} />
+          <Card title="US Reach">
+            <BigNumber value={`${usPercent}%`} label="of actions include US" />
           </Card>
           <Card title="APL Coverage">
             <BigNumber value={`${aplPercent}%`} label="actions with positions" />
@@ -251,14 +246,18 @@ export default async function Dashboard() {
             ))}
           </Card>
 
-          <Card title="Actions by Country">
+          <Card 
+            title="Actions by Country"
+            footer="Actions can span multiple countries. Percentages show share of total coverage, not actions."
+          >
             {data.actionsByCountry.slice(0, 12).map((c: any) => (
               <ProgressBar 
                 key={c.country} 
                 value={c.count} 
                 max={data.actionsByCountry[0]?.count || 1}
-                total={data.totalActions}
-                label={c.country} 
+                total={totalCountryTags}
+                label={c.country}
+                percentLabel="of geographic share"
               />
             ))}
           </Card>
