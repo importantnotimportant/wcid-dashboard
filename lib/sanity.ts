@@ -189,8 +189,8 @@ export const US_STATES = [
   'Virginia', 'Washington', 'West Virginia', 'Wisconsin', 'Wyoming'
 ]
 
+// Static queries (no date arithmetic)
 export const queries = {
-  // ===== OVERVIEW =====
   totalActions: `count(*[_type == "action"])`,
   
   totalCountries: `
@@ -203,7 +203,6 @@ export const queries = {
     "noCountry": count(*[_type == "action" && (!defined(location.countries) || length(location.countries) == 0)])
   }`,
   
-  // US vs Non-US excluding Be Heard actions
   usVsNonUsExcludingBeHeard: `{
     "us": count(*[_type == "action" && "United States" in location.countries && !references(*[_type == "category" && slug.current == "be-heard"]._id)]),
     "nonUs": count(*[_type == "action" && defined(location.countries) && length(location.countries) > 0 && !("United States" in location.countries) && !references(*[_type == "category" && slug.current == "be-heard"]._id)]),
@@ -216,7 +215,6 @@ export const queries = {
     "total": count(*[_type == "action"])
   }`,
 
-  // ===== BE HEARD =====
   beHeardByLevel: `{
     "federal": count(*[_type == "action" && references(*[_type == "category" && slug.current == "be-heard"]._id) && "United States" in location.countries && (!defined(location.states) || length(location.states) == 0) && (!defined(location.cities) || length(location.cities) == 0)]),
     "state": count(*[_type == "action" && references(*[_type == "category" && slug.current == "be-heard"]._id) && defined(location.states) && length(location.states) > 0 && (!defined(location.cities) || length(location.cities) == 0) && (!defined(location.zipcodes) || length(location.zipcodes) == 0)]),
@@ -230,7 +228,6 @@ export const queries = {
     }
   `,
 
-  // ===== CONTENT DISTRIBUTION =====
   actionsByCategory: `
     *[_type == "category"] {
       "name": title,
@@ -267,7 +264,6 @@ export const queries = {
     }
   `,
 
-  // ===== CONTENT HEALTH =====
   actionsPastReviewDate: `
     *[_type == "action" && defined(review_date) && review_date < now()] | order(review_date asc) [0...20] {
       title,
@@ -286,9 +282,8 @@ export const queries = {
   
   actionsMissingOrganization: `count(*[_type == "action" && !defined(organization)])`,
   
-  actionsStale6Months: `count(*[_type == "action" && _updatedAt < dateTime(now()) - 60*60*24*180])`,
+  actionsStale6Months: `count(*[_type == "action" && _updatedAt < $sixMonthsAgo])`,
 
-  // ===== TAXONOMY HEALTH =====
   nounsWithZeroActions: `
     *[_type == "noun" && count(*[_type == "action" && references(^._id)]) == 0] {
       "name": title,
@@ -302,19 +297,14 @@ export const queries = {
     } | order(name asc)
   `,
 
-  // ===== ORGANIZATION INSIGHTS =====
+  // Fixed: use "title" instead of "name" for organization field
   topOrganizations: `
     *[_type == "organization"] {
-      "name": name,
+      "name": title,
       "count": count(*[_type == "action" && references(^._id)])
     } | order(count desc) [0...15]
   `,
 
-  // ===== RECENCY =====
-  actionsCreatedLast30Days: `count(*[_type == "action" && _createdAt > dateTime(now()) - 60*60*24*30])`,
-  actionsCreatedLast60Days: `count(*[_type == "action" && _createdAt > dateTime(now()) - 60*60*24*60])`,
-  actionsCreatedLast90Days: `count(*[_type == "action" && _createdAt > dateTime(now()) - 60*60*24*90])`,
-  
   recentlyUpdatedActions: `
     *[_type == "action"] | order(_updatedAt desc) [0...10] {
       title,
@@ -331,7 +321,6 @@ export const queries = {
     }
   `,
 
-  // ===== APL =====
   actionsByPosition: `
     *[_type == "position"] {
       "id": position_id,
@@ -344,6 +333,13 @@ export const queries = {
 }
 
 export async function fetchDashboardData() {
+  // Calculate date thresholds in JavaScript (since GROQ date arithmetic is limited)
+  const now = new Date()
+  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString()
+  const sixtyDaysAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000).toISOString()
+  const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000).toISOString()
+  const sixMonthsAgo = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000).toISOString()
+
   const [
     totalActions,
     totalCountries,
@@ -393,13 +389,14 @@ export async function fetchDashboardData() {
     sanityClient.fetch(queries.actionsMissingDescription),
     sanityClient.fetch(queries.actionsMissingUrl),
     sanityClient.fetch(queries.actionsMissingOrganization),
-    sanityClient.fetch(queries.actionsStale6Months),
+    sanityClient.fetch(queries.actionsStale6Months, { sixMonthsAgo }),
     sanityClient.fetch(queries.nounsWithZeroActions),
     sanityClient.fetch(queries.skillsWithZeroActions),
     sanityClient.fetch(queries.topOrganizations),
-    sanityClient.fetch(queries.actionsCreatedLast30Days),
-    sanityClient.fetch(queries.actionsCreatedLast60Days),
-    sanityClient.fetch(queries.actionsCreatedLast90Days),
+    // Date-based queries with computed dates
+    sanityClient.fetch(`count(*[_type == "action" && _createdAt > $date])`, { date: thirtyDaysAgo }),
+    sanityClient.fetch(`count(*[_type == "action" && _createdAt > $date])`, { date: sixtyDaysAgo }),
+    sanityClient.fetch(`count(*[_type == "action" && _createdAt > $date])`, { date: ninetyDaysAgo }),
     sanityClient.fetch(queries.recentlyUpdatedActions),
     sanityClient.fetch(queries.recentlyCreatedActions),
     sanityClient.fetch(queries.actionsByPosition),
@@ -460,24 +457,20 @@ export async function fetchDashboardData() {
     .slice(0, 15)
 
   return {
-    // Overview
     totalActions,
     totalCountries,
     usVsNonUs,
     usVsNonUsExcludingBeHeard,
     aplCoverage,
-    // Be Heard
     beHeardByLevel,
     beHeardByState,
     statesWithoutBeHeard,
-    // Content Distribution
     actionsByCategory,
     actionsByNoun,
     actionsByCountry,
     actionsByContinent,
     actionsBySkill,
     verbNounCombos,
-    // Content Health
     actionsPastReviewDate,
     actionsPastReviewDateCount,
     actionsMissingLogline,
@@ -485,20 +478,15 @@ export async function fetchDashboardData() {
     actionsMissingUrl,
     actionsMissingOrganization,
     actionsStale6Months,
-    // Taxonomy Health
     nounsWithZeroActions,
     skillsWithZeroActions,
-    // Organization Insights
     topOrganizations,
-    // Recency
     actionsCreatedLast30Days,
     actionsCreatedLast60Days,
     actionsCreatedLast90Days,
     recentlyUpdatedActions,
     recentlyCreatedActions,
-    // APL
     actionsByPosition,
-    // Meta
     lastUpdated: lastUpdated?._updatedAt || null,
     fetchedAt: new Date().toISOString(),
   }

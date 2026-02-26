@@ -123,14 +123,8 @@ export default async function Dashboard() {
     ? Math.round((data.aplCoverage.withPositions / data.aplCoverage.total) * 100)
     : 0
 
-  // Calculate totals for percentage displays
-  const totalCategoryActions = data.actionsByCategory.reduce((sum: number, c: any) => sum + c.count, 0)
-  const totalNounActions = data.actionsByNoun.reduce((sum: number, n: any) => sum + n.count, 0)
-  const totalSkillActions = data.actionsBySkill.reduce((sum: number, s: any) => sum + s.count, 0)
-  const totalOrgActions = data.topOrganizations.reduce((sum: number, o: any) => sum + o.count, 0)
-  const totalCountryActions = data.actionsByCountry.reduce((sum: number, c: any) => sum + c.count, 0)
-  const totalContinentActions = data.actionsByContinent.reduce((sum: number, c: any) => sum + c.count, 0)
-  const totalStateActions = data.beHeardByState.reduce((sum: number, s: any) => sum + s.count, 0)
+  // For multi-select fields, use totalActions as denominator to show "% of actions with this tag"
+  // This is more meaningful than "% of all tags" when items can have multiple tags
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -194,7 +188,7 @@ export default async function Dashboard() {
                     key={s.state} 
                     value={s.count} 
                     max={data.beHeardByState[0]?.count || 1}
-                    total={totalStateActions}
+                    total={data.beHeardByLevel.state}
                     label={s.state} 
                   />
                 ))}
@@ -227,7 +221,7 @@ export default async function Dashboard() {
                 key={cat.slug} 
                 value={cat.count} 
                 max={data.actionsByCategory[0]?.count || 1}
-                total={totalCategoryActions}
+                total={data.totalActions}
                 label={cat.name} 
               />
             ))}
@@ -239,7 +233,7 @@ export default async function Dashboard() {
                 key={noun.slug} 
                 value={noun.count} 
                 max={data.actionsByNoun[0]?.count || 1}
-                total={totalNounActions}
+                total={data.totalActions}
                 label={noun.name} 
               />
             ))}
@@ -251,7 +245,7 @@ export default async function Dashboard() {
                 key={c.continent} 
                 value={c.count} 
                 max={data.actionsByContinent[0]?.count || 1}
-                total={totalContinentActions}
+                total={data.totalActions}
                 label={c.continent} 
               />
             ))}
@@ -263,7 +257,7 @@ export default async function Dashboard() {
                 key={c.country} 
                 value={c.count} 
                 max={data.actionsByCountry[0]?.count || 1}
-                total={totalCountryActions}
+                total={data.totalActions}
                 label={c.country} 
               />
             ))}
@@ -275,22 +269,26 @@ export default async function Dashboard() {
                 key={skill.name} 
                 value={skill.count} 
                 max={data.actionsBySkill[0]?.count || 1}
-                total={totalSkillActions}
+                total={data.totalActions}
                 label={skill.name} 
               />
             ))}
           </Card>
 
           <Card title="Top Organizations">
-            {data.topOrganizations.filter((o: any) => o.count > 0 && o.name).slice(0, 10).map((org: any) => (
-              <ProgressBar 
-                key={org.name} 
-                value={org.count} 
-                max={data.topOrganizations[0]?.count || 1}
-                total={totalOrgActions}
-                label={org.name || '(unnamed)'} 
-              />
-            ))}
+            {data.topOrganizations.filter((o: any) => o.count > 0 && o.name).length > 0 ? (
+              data.topOrganizations.filter((o: any) => o.count > 0 && o.name).slice(0, 10).map((org: any) => (
+                <ProgressBar 
+                  key={org.name} 
+                  value={org.count} 
+                  max={data.topOrganizations.filter((o: any) => o.name)[0]?.count || 1}
+                  total={data.totalActions}
+                  label={org.name} 
+                />
+              ))
+            ) : (
+              <div className="text-gray-400 text-sm">No organization data</div>
+            )}
           </Card>
         </div>
 
